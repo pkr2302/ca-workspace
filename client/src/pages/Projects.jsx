@@ -27,6 +27,7 @@ const Projects = () => {
       setProjects(projRes.data);
       setClients(cliRes.data);
     } catch (err) {
+      alert("Error fetching data: " + (err.response?.data?.error || err.message));
       console.error(err);
     }
   };

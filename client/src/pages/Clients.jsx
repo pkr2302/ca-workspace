@@ -17,6 +17,7 @@ const Clients = () => {
       const res = await axios.get('/api/clients');
       setClients(res.data);
     } catch (error) {
+      alert("Error fetching clients: " + (error.response?.data?.error || error.message));
       console.error("Error fetching clients", error);
     }
   };
@@ -25,8 +26,12 @@ const Clients = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this client?")) {
-      await axios.delete(`/api/clients/${id}`);
-      fetchClients();
+      try {
+        await axios.delete(`/api/clients/${id}`);
+        fetchClients();
+      } catch (error) {
+        alert("Error deleting client: " + (error.response?.data?.error || error.message));
+      }
     }
   };
 
@@ -38,6 +43,7 @@ const Clients = () => {
       setFormData({ name: '', pan: '', category: 'Individual' });
       fetchClients();
     } catch (error) {
+      alert("Error adding client: " + (error.response?.data?.error || error.message));
       console.error("Error adding client", error);
     }
   };
