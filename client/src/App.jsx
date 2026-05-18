@@ -19,29 +19,25 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.access_token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+      }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.access_token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
+      } else {
+        delete axios.defaults.headers.common['Authorization'];
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Axios interceptor to add token
-  useEffect(() => {
-    const interceptor = axios.interceptors.request.use((config) => {
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-      }
-      return config;
-    });
 
-    return () => {
-      axios.interceptors.request.eject(interceptor);
-    };
-  }, [session]);
 
   if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
 
