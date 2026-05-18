@@ -32,6 +32,33 @@
   --radius-xl: 16px;
 }
 
+[data-theme="dark"] {
+  /* Brand Colors - Adjusted for dark mode */
+  --primary-blue: #3b82f6; 
+  --primary-blue-light: #60a5fa;
+  --primary-purple: #8b5cf6; 
+  --primary-purple-light: #a78bfa;
+  
+  /* Backgrounds */
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --bg-sidebar: #020617;
+  
+  /* Text */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-light: #f8fafc;
+  
+  /* Borders & Highlights */
+  --border-color: #334155;
+  --hover-color: #1e293b;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+}
+
 * {
   margin: 0;
   padding: 0;

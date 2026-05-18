@@ -57,6 +57,9 @@ const Dashboard = () => {
       <div className="flex-between" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title">Hello Priyank Rajpopat 👋</h1>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
+            {moment().format('dddd, MMMM Do YYYY')}
+          </p>
           <p className="page-subtitle" style={{ fontStyle: 'italic', color: 'var(--primary-purple)' }}>
             "{quote}"
           </p>

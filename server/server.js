@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { Client } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -137,6 +138,23 @@ app.get('/api/files/:client_id', async (req, res) => {
     const result = await db.query('SELECT * FROM files WHERE client_id = $1 ORDER BY id DESC', [req.params.client_id]);
     res.json(result.rows);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// AI Chat
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+app.post('/api/chat', async (req, res) => {
+  const { message } = req.body;
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `You are a helpful AI assistant built directly into a Chartered Accountant Dashboard. Help the user answer any questions concisely. Question: ${message}`,
+    });
+    res.json({ reply: response.text });
+  } catch (err) {
+    console.error('Chat Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
