@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenAI } = require('@google/genai');
 
@@ -21,8 +21,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Postgres Config
 const connStr = process.env.DATABASE_URL;
-const db = new Client({ connectionString: connStr });
-db.connect().then(() => console.log('Connected to Supabase PostgreSQL')).catch(err => console.error(err));
+const db = new Pool({ 
+  connectionString: connStr,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
 
 // Auth Middleware
 const authenticateToken = async (req, res, next) => {
