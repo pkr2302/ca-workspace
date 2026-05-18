@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenAI } = require('@google/genai');
 
@@ -14,19 +13,10 @@ app.use(express.json());
 
 require('dotenv').config();
 
-// Supabase Config
+// Supabase Config (Uses HTTPS, fully avoids IPv6/IPv4 database connection issues!)
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Postgres Config
-const connStr = process.env.DATABASE_URL;
-const db = new Pool({ 
-  connectionString: connStr,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
 
 // Auth Middleware
 const authenticateToken = async (req, res, next) => {
@@ -50,117 +40,72 @@ app.use('/api', authenticateToken);
 
 // Clients
 app.get('/api/clients', async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM clients WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('clients').select('*').eq('user_id', req.user.id).order('id', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 app.post('/api/clients', async (req, res) => {
   const { name, pan, category } = req.body;
-  try {
-    const result = await db.query(
-      'INSERT INTO clients (name, pan, category, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, pan, category, req.user.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('clients').insert([{ name, pan, category, user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
 });
 
 app.delete('/api/clients/:id', async (req, res) => {
-  try {
-    const result = await db.query('DELETE FROM clients WHERE id = $1 AND user_id = $2 RETURNING *', [req.params.id, req.user.id]);
-    res.json({ deleted: result.rowCount });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('clients').delete().eq('id', req.params.id).eq('user_id', req.user.id).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ deleted: data ? data.length : 0 });
 });
 
 // Projects
 app.get('/api/projects', async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM projects WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('projects').select('*').eq('user_id', req.user.id).order('id', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 app.post('/api/projects', async (req, res) => {
   const { title, description, client_id, status } = req.body;
   const cId = client_id ? parseInt(client_id) : null;
-  try {
-    const result = await db.query(
-      'INSERT INTO projects (title, description, client_id, status, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, description, cId, status || 'active', req.user.id]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('projects').insert([{ title, description, client_id: cId, status: status || 'active', user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
 });
 
 app.put('/api/projects/:id', async (req, res) => {
   const { title, description, client_id, status } = req.body;
   const cId = client_id ? parseInt(client_id) : null;
-  try {
-    const result = await db.query(
-      'UPDATE projects SET title = $1, description = $2, client_id = $3, status = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
-      [title, description, cId, status, req.params.id, req.user.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('projects').update({ title, description, client_id: cId, status }).eq('id', req.params.id).eq('user_id', req.user.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 app.delete('/api/projects/:id', async (req, res) => {
-  try {
-    await db.query('DELETE FROM projects WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-    res.status(204).send();
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { error } = await supabase.from('projects').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(204).send();
 });
 
 // Tasks
 app.get('/api/tasks', async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM tasks WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('tasks').select('*').eq('user_id', req.user.id).order('id', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 app.post('/api/tasks', async (req, res) => {
   const { title, date, reminder, status } = req.body;
-  try {
-    const result = await db.query(
-      'INSERT INTO tasks (title, date, reminder, status, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, date, reminder, status || 'pending', req.user.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('tasks').insert([{ title, date, reminder, status: status || 'pending', user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 app.put('/api/tasks/:id', async (req, res) => {
   const { status } = req.body;
-  try {
-    const result = await db.query(
-      'UPDATE tasks SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
-      [status, req.params.id, req.user.id]
-    );
-    res.json({ updated: result.rowCount });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('tasks').update({ status }).eq('id', req.params.id).eq('user_id', req.user.id).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ updated: data ? data.length : 0 });
 });
 
 // Files
@@ -184,12 +129,10 @@ app.post('/api/files', upload.single('file'), async (req, res) => {
     const { data: publicUrlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
     const publicUrl = publicUrlData.publicUrl;
 
-    const result = await db.query(
-      'INSERT INTO files (client_id, filename, filepath, type, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [client_id, req.file.originalname, publicUrl, type, req.user.id]
-    );
+    const { data, error } = await supabase.from('files').insert([{ client_id, filename: req.file.originalname, filepath: publicUrl, type, user_id: req.user.id }]).select().single();
+    if (error) throw error;
     
-    res.json(result.rows[0]);
+    res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -197,12 +140,9 @@ app.post('/api/files', upload.single('file'), async (req, res) => {
 });
 
 app.get('/api/files/:client_id', async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM files WHERE client_id = $1 AND user_id = $2 ORDER BY id DESC', [req.params.client_id, req.user.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase.from('files').select('*').eq('client_id', req.params.client_id).eq('user_id', req.user.id).order('id', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 // AI Chat
