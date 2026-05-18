@@ -47,6 +47,13 @@ const Sidebar = () => {
           <span>Clients</span>
         </NavLink>
         <NavLink 
+          to="/projects" 
+          className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+        >
+          <FolderOpen size={20} />
+          <span>Projects</span>
+        </NavLink>
+        <NavLink 
           to="/tasks" 
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
         >
@@ -62,31 +69,15 @@ const Sidebar = () => {
         </NavLink>
       </nav>
       
-      {/* Theme Toggle Button */}
       <div style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <button 
-          onClick={toggleTheme}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '0.875rem 1rem',
-            background: 'transparent',
-            border: 'none',
-            color: '#cbd5e1',
-            cursor: 'pointer',
-            borderRadius: '8px',
-            transition: 'all 0.2s ease',
-            fontFamily: 'inherit',
-            fontSize: '1rem'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'white'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#cbd5e1'; }}
+        <NavLink 
+          to="/settings" 
+          className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          style={{ width: '100%', marginBottom: 0 }}
         >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-        </button>
+          <Sun size={20} />
+          <span>Settings</span>
+        </NavLink>
       </div>
     </aside>
   );

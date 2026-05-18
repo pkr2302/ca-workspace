@@ -24,15 +24,30 @@ const connStr = process.env.DATABASE_URL;
 const db = new Client({ connectionString: connStr });
 db.connect().then(() => console.log('Connected to Supabase PostgreSQL')).catch(err => console.error(err));
 
-// Setup Multer for memory storage (for uploading to Supabase)
+// Auth Middleware
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(403).json({ error: 'Invalid token' });
+  
+  req.user = user;
+  next();
+};
+
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Apply auth middleware to all API routes
+app.use('/api', authenticateToken);
 
 // --- API ROUTES ---
 
 // Clients
 app.get('/api/clients', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM clients ORDER BY id DESC');
+    const result = await db.query('SELECT * FROM clients WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,8 +58,8 @@ app.post('/api/clients', async (req, res) => {
   const { name, pan, category } = req.body;
   try {
     const result = await db.query(
-      'INSERT INTO clients (name, pan, category) VALUES ($1, $2, $3) RETURNING *',
-      [name, pan, category]
+      'INSERT INTO clients (name, pan, category, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, pan, category, req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -54,8 +69,55 @@ app.post('/api/clients', async (req, res) => {
 
 app.delete('/api/clients/:id', async (req, res) => {
   try {
-    const result = await db.query('DELETE FROM clients WHERE id = $1 RETURNING *', [req.params.id]);
+    const result = await db.query('DELETE FROM clients WHERE id = $1 AND user_id = $2 RETURNING *', [req.params.id, req.user.id]);
     res.json({ deleted: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Projects
+app.get('/api/projects', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM projects WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects', async (req, res) => {
+  const { title, description, client_id, status } = req.body;
+  const cId = client_id ? parseInt(client_id) : null;
+  try {
+    const result = await db.query(
+      'INSERT INTO projects (title, description, client_id, status, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [title, description, cId, status || 'active', req.user.id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id', async (req, res) => {
+  const { title, description, client_id, status } = req.body;
+  const cId = client_id ? parseInt(client_id) : null;
+  try {
+    const result = await db.query(
+      'UPDATE projects SET title = $1, description = $2, client_id = $3, status = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
+      [title, description, cId, status, req.params.id, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM projects WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -64,7 +126,7 @@ app.delete('/api/clients/:id', async (req, res) => {
 // Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM tasks ORDER BY id DESC');
+    const result = await db.query('SELECT * FROM tasks WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -75,8 +137,8 @@ app.post('/api/tasks', async (req, res) => {
   const { title, date, reminder, status } = req.body;
   try {
     const result = await db.query(
-      'INSERT INTO tasks (title, date, reminder, status) VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, date, reminder, status || 'pending']
+      'INSERT INTO tasks (title, date, reminder, status, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [title, date, reminder, status || 'pending', req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -88,8 +150,8 @@ app.put('/api/tasks/:id', async (req, res) => {
   const { status } = req.body;
   try {
     const result = await db.query(
-      'UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *',
-      [status, req.params.id]
+      'UPDATE tasks SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [status, req.params.id, req.user.id]
     );
     res.json({ updated: result.rowCount });
   } catch (err) {
@@ -103,9 +165,8 @@ app.post('/api/files', upload.single('file'), async (req, res) => {
   const { client_id, type } = req.body;
   
   try {
-    // 1. Upload to Supabase Storage
     const fileName = `${Date.now()}-${req.file.originalname}`;
-    const filePath = `${client_id}/${fileName}`;
+    const filePath = `${req.user.id}/${client_id}/${fileName}`;
     
     const { data: storageData, error: storageError } = await supabase.storage
       .from('uploads')
@@ -116,14 +177,12 @@ app.post('/api/files', upload.single('file'), async (req, res) => {
       
     if (storageError) throw storageError;
 
-    // Get public URL
     const { data: publicUrlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
     const publicUrl = publicUrlData.publicUrl;
 
-    // 2. Insert record into Postgres
     const result = await db.query(
-      'INSERT INTO files (client_id, filename, filepath, type) VALUES ($1, $2, $3, $4) RETURNING *',
-      [client_id, req.file.originalname, publicUrl, type]
+      'INSERT INTO files (client_id, filename, filepath, type, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [client_id, req.file.originalname, publicUrl, type, req.user.id]
     );
     
     res.json(result.rows[0]);
@@ -135,7 +194,7 @@ app.post('/api/files', upload.single('file'), async (req, res) => {
 
 app.get('/api/files/:client_id', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM files WHERE client_id = $1 ORDER BY id DESC', [req.params.client_id]);
+    const result = await db.query('SELECT * FROM files WHERE client_id = $1 AND user_id = $2 ORDER BY id DESC', [req.params.client_id, req.user.id]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -159,20 +218,18 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Serve static files from the React app
+// Serve static files
 const clientBuildPath = path.join(__dirname, '../client/dist');
 app.use(express.static(clientBuildPath));
 
-// The "catchall" handler
 app.use((req, res, next) => {
-  if (req.method === 'GET') {
+  if (req.method === 'GET' && !req.url.startsWith('/api')) {
     res.sendFile(path.join(clientBuildPath, 'index.html'));
   } else {
     next();
   }
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

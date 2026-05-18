@@ -57,6 +57,53 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+
+  /* Calendar Dark Mode Overrides */
+  --rbc-text: var(--text-primary);
+  --rbc-off-range-text: var(--text-secondary);
+}
+
+[data-theme="dark"] .rbc-calendar,
+[data-theme="dark"] .rbc-month-view,
+[data-theme="dark"] .rbc-time-view,
+[data-theme="dark"] .rbc-agenda-view {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .rbc-header {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .rbc-month-row,
+[data-theme="dark"] .rbc-day-bg,
+[data-theme="dark"] .rbc-month-header {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .rbc-off-range-bg {
+  background: var(--hover-color);
+}
+
+[data-theme="dark"] .rbc-off-range {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .rbc-btn-group button {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  background: var(--bg-card);
+}
+
+[data-theme="dark"] .rbc-btn-group button:hover,
+[data-theme="dark"] .rbc-btn-group button.rbc-active {
+  background: var(--hover-color);
+  color: white;
+}
+
+[data-theme="dark"] .rbc-toolbar button {
+  color: var(--text-primary);
 }
 
 * {
