@@ -73,11 +73,20 @@ const Sidebar = () => {
         <NavLink 
           to="/settings" 
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-          style={{ width: '100%', marginBottom: 0 }}
+          style={{ width: '100%', marginBottom: '1rem' }}
         >
           <Sun size={20} />
           <span>Settings</span>
         </NavLink>
+        
+        <div style={{
+          fontSize: '0.65rem',
+          color: 'rgba(255,255,255,0.4)',
+          textAlign: 'center',
+          marginTop: '1rem'
+        }}>
+          &copy; {new Date().getFullYear()} Priyank K Rajpopat.<br/>All Rights Reserved.
+        </div>
       </div>
     </aside>
   );
