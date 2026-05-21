@@ -15,7 +15,8 @@ require('dotenv').config();
 
 // Supabase Config (Uses HTTPS, fully avoids IPv6/IPv4 database connection issues!)
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+// We MUST use the service role key to bypass RLS and read data securely on the backend
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Auth Middleware
